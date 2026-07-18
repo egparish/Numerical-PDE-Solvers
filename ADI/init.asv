@@ -1,0 +1,116 @@
+% NOTE: Parts of the file are withheld but available on request.
+% Structure, documentation, and descriptions are intact.  the file will
+% not run as posted.
+
+% This file contains the initialization functions for the two different
+% parts for this project.  They are split into two different functions with
+% the same name with both be commented out to start.  Both have the same
+% structure of taking the grid size as parameters, creating and initializing
+% the grid, and then returning the grid.
+
+% Init funciton for the first part
+function [u] = init(NX, NY, ALPHA, BETA)
+    % This function creates the solution grid of the correct size and then
+    % populates the grid with the correct initial conditions.  For this
+    % project the initial condition is a functino of x and y
+
+    % Inputs:
+    %   NX = number of points in the x direction
+    %   NY = number of points in the y direction
+    %   ALPHA = integer mode number for the IC
+    %   BETA = integer mode number for the IC
+    % Outputs:
+    %   u = the solution grid populated with the initial conditions
+
+    % Create the solution grid
+    u = zeros(NX, NY);
+
+    % For this project 0 <= x, y <= 1, so we need to find dx and dy so the
+    % value of the grid can be calculated properly.  We also need to
+    % account for the 0 which will be done by subtracting 1 from NX and NY
+    dx = 1 / (NX - 1);
+    dy = 1 / (NY - 1);
+
+    % % % PART 1
+    % This is code specific for the initial conditions for the first part
+    % u(0, x, y) = sin(alpha * pi * x)sin(beta * pi * y)
+
+    current_x = 0;
+    current_y = 0;
+
+    for j = 1:NX
+        % To account for 1 indexing in MATLAB to capture the x = 0 values
+        current_x = dx * (j - 1);
+
+        for k = 1:NY
+            % To account for the 1 indexing in MATLAB, to capture the y = 0
+            % values
+            current_y = dy * (k - 1);
+
+            % % Calculate the value of the initial condition - Q 1
+            % first_sin = sin(ALPHA * pi * current_x);
+            % second_sin = sin(BETA * pi * current_y);
+            % 
+            % u(j, k) = first_sin * second_sin;
+
+            % Calculate the value of the initial condition - Q 
+            first_sin = sin(ALPHA * pi * current_x);
+            
+            u(j, k) = first_sin;
+        end
+    end
+end
+
+% % Init function for the second part
+% function [u] = init(NX, NY, SIGMA, Xc, Yc)
+%     % This function creates the solution grid of the correct size and then
+%     % populates the grid with the correct initial conditions.  For this
+%     % project the initial condition is a functino of x and y
+% 
+%     % Inputs:
+%     %   NX = number of points in the x direction
+%     %   NY = number of points in the y direction
+%     %   SIGMA = problem parameter
+%     %   Xc = X coordinate of the impulsive heating
+%     %   Yc = Y coordinate of the impulsive heating
+%     % Outputs:
+%     %   u = the solution grid populated with the initial conditions
+% 
+%     % Create the solution grid
+%     u = zeros(NX, NY);
+% 
+%     % For this project 0 <= x, y <= 1, so we need to find dx and dy so the
+%     % value of the grid can be calculated properly.  We also need to
+%     % account for the 0 which will be done by subtracting 1 from NX and NY
+%     dx = 1 / (NX - 1);
+%     dy = 1 / (NY - 1);
+% 
+%     % % % PART 1
+%     % This is code specific for the initial conditions for the first part
+%     % u(0, x, y) = exp(-((x - x_c)^2 + (y - y_c)^2) / 2 * sigma^2) / (2 * 
+%     %                   pi * sigma^2)
+% 
+%     current_x = 0;
+%     current_y = 0;
+% 
+%     for j = 1:NX
+%         % To account for 1 indexing in MATLAB to capture the x = 0 values
+%         current_x = dx * (j - 1);
+% 
+%         for k = 1:NY
+%             % To account for the 1 indexing in MATLAB, to capture the y = 0
+%             % values
+%             current_y = dy * (k - 1);
+% 
+%             % Calculate the various values of the initial condition at this
+%             % coordinate point
+%             term_1 = (current_x - Xc)^2;
+%             term_2 = (current_y - Yc)^2;
+%             denom_1 = 2 * SIGMA^2;
+%             frac_1 = -(term_1 + term_2) / denom_1;
+%             denom_2 = 2 * pi * SIGMA^2;
+% 
+%             u(j, k) = exp(frac_1) / denom_2;
+%         end
+%     end
+% end
