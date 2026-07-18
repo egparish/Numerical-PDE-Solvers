@@ -1,0 +1,117 @@
+% NOTE: Parts of the file are withheld but available on request.
+% Structure, documentation, and descriptions are intact.  the file will
+% not run as posted.
+
+function [u_final, iterations, max_val] = Line_SSOR(u, epsilon, N, omega)
+    % This function uses the line SSOR method to solve a system of linear
+    % equations.  Since A is derived from the discretization of the problem
+    % it is not stored and a separate function is used for matrix
+    % multiplications involving A
+    % Inputs:
+    %   u = the initial data for the system
+    %   epslion = from the original PDE
+    %   N = the number of data points in u, does not include the imaginary
+    %   points
+    %   omega = SOR weight
+    % Outputs
+    %   u_final = the results of the relaxation method
+    %   num_iteration = number of iterations solver ran for
+    %   max_val = ending maximum value of u 
+
+    % Line SSOR is similar to line SOR but it includes an additional sweep
+    % up after the initial sweep down.  Line SOR involves solving all of the
+    % equations in a line simultaneously using the Thomas algorithm, as a
+    % result the Thomas algorithm will be used in each step to solve for
+    % the entire row of u.  This method converges when the largest u values
+    % is below the tolerance with the starting value being set to the
+    % initial max.  The total number of eu
+    % 
+    % The u matrix is (N + 2) x (N + 2) = N_mod x
+    % N_mod with three versions, the initial values, intermediate step, and
+    % final step to make the problem easier
+
+    % This method converges when the largest u value is below the
+    % tolerance, at the start it is going to be set to the initial max.
+    % The total number of equations which is going to be used in the solver
+    % is N^2.  The system_dimension variable is the size of the matrix
+    % including the fake points, sys_dim = N + 2
+    tol = 10^-7;
+    max_val = max(max(u));
+    num_eqn = N^2;
+    sys_dim = N + 2;
+
+    % This code is only going to use twos set of u values to make following
+    % the problem easier
+    % For ease of use I am going to store 3 sets of u values, the initial
+    % set, the intermediate step, and the final step
+    u_initial = u;
+    u_intermediate = u;
+    u_full_step = u;
+
+    % Line SSOR is build off of SOR.  It includes a line SOR sweep down and 
+    % then a reverse line sweep of SOR up.  The first sweep generates a set 
+    % of temporary u values that will be used in the second sweep to generate
+    % the final u values for the step.  This program is going to consist of
+    % 2 nester for loops, each of the loops is going to call the Thomas Algorithm
+    % function on the line of u it is working with.  The main while loop is 
+    % going to run until a certain number of iterations has been completed 
+    % or the method converges. The first pass down is the same as Line SOR
+    % so nothing changes.  In terms of the loop up the indicies are going
+    % to be reversed but the rest of the structure will not change since we 
+    % are going to use the first sweep u values and update them as we go.  
+    % Both sweeps are going to use the form:
+    %   GS_vals = Thomas_Algorithm(current row)
+    %   u_new(i, row) = omega * GS_vals(i) + (1 - omega) * u_old(i, row)
+
+    iterations = 0;
+    while max_val > tol && iterations < 100000
+        iterations = iterations + 1;
+
+        cur_max_u = 0;
+
+        % u_new = omega * u_GS + (1 - omega) * u_old
+
+        % This is the first line SOR sweep, we call the Thomas Algorithm on
+        % each row of u, but in my implementation we pass the entire u
+        % matrix (not ideal)
+        for i = 2:(N + 1)
+            GS_vals = Thomas_Algorithm(epsilon, N, u_initial, i);
+
+            % The nested for loop is responsible for updating the values of
+            % u
+            for j = 2:(N + 1)
+                u_intermediate(i, j) = omega * GS_vals(j - 1) + ...
+                    (1 - omega) * u_initial(i, j);
+            end
+        end
+
+        % This is the second Line SOR sweep which is done in reverse, we
+        % are going to call the Thomas Algorithm on the u_intermediate
+        % matrix (not ideal)
+        for i = (N + 1):-1:2
+            GS_vals = Thomas_Algorithm(epsilon, N, u_intermediate, i);
+
+            % The nested for loop is responsible for updating the values of
+            % u
+            for j = (N + 1):-1:2
+                u_initial(i, j) = omega * GS_vals(j - 1) + ...
+                    (1 - omega) * u_intermediate(i, j);
+
+                % Check to see if this magnitude of u is larger then the
+                % current max
+                if abs(u_initial(i, j)) > cur_max_u
+                    cur_max_u = abs(u_initial(i, j));
+                end
+            end
+        end
+
+        % After all of the new values have been found we can update the
+        % max_val and the initial u values
+        max_val = cur_max_u;
+        % u_initial = u_full_step;
+    end
+
+    % Once we get outside of this loop then we have found the final u
+    % values
+    u_final = u_initial;
+end

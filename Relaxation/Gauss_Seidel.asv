@@ -1,0 +1,150 @@
+% NOTE: Parts of the file are withheld but available on request.
+% Structure, documentation, and descriptions are intact.  the file will
+% not run as posted.
+
+function [u_final, iterations, max_val] = Gauss_Seidel(u, epsilon, N)
+    % This function is going to use Gauss-Seidel to solve a system of
+    % linear equations.  Since A is a sparce matrix, a separate function is
+    % going to be used to optimize the matrix multiplication.  In addition,
+    % A does not need to be stored since it is dependent on the
+    % discretization of the problem.  The u matrix is going to be
+    % (N + 2) x (N + 2) = N_mod x N_mod
+    % Inputs:
+    %   u = the initial data for the system
+    %   epsilon = from the original PDE
+    %   N = the number of data points in u, does not include the imaginary
+    %   points
+    % Outputs
+    %   u_final = the results of the relaxation method
+
+    % This method converges when the largest u value is below the tolerance
+    % which starts as the initial max value.  The total number of equations
+    % used in the solver is N^2.  The system_dimension variable is the size
+    % of the matrix including the fake points, sys_dim = N + 2
+    tol = 10^-7;
+    max_val = max(max(u));
+    num_eqn = N^2;
+    sys_dim = N + 2;
+
+    % In Gauss-Seidel, the new values are used as soon as they are found
+    % which requires only one matrix for the solution.  The solver will be
+    % run using a while loop
+
+    % This code is only going to use one set of u values and the new values
+    % will be used as they are generated
+    u_vals = u;
+    
+    % With Gauss Seidel we are going to use the new values as soon as we
+    % get them.  We are also going to make the most out of the shape of A
+    % to minimize the number of operations we are going to use.  All of the
+    % code is going to be contained in a while loop that runs until a max
+    % number of iterations have been completed or if the method converged.
+    % Within the loop there is going to be a doulbe for loop that is the
+    % same as iterating through all of the equations, it is easier this way 
+    % due to how I store u.  Each new u value is going to be found as
+    % follows:
+    %   u_i^(n+1) = (b_i - sum(not including i) of a_ij*x_j) / a_ii
+
+    iterations = 0;
+    while max_val > tol && iterations < 100000
+        iterations = iterations + 1;
+
+        cur_max_u = 0;
+        for i = 2:(N + 1)
+            for j = 2:(N + 1)
+                % For easier debugging I am going to calculate all of the
+                % a_ij*x_j in separate lines
+                % below_point = 1 * u_vals(i - 1, j);
+                % left_point = epsilon * u_vals(i, j - 1);
+                % right_point = epsilon * u_vals(i, j + 1);
+                % top_point = 1 * u_vals(i + 1, j);
+
+                below_point = 1 * u_vals(i - 1, j);
+                left_point = epsilon * u_vals(i, j - 1);
+                right_point = epsilon * u_vals(i, j + 1);
+                top_point = 1 * u_vals(i + 1, j);
+
+                % b is 0 in this case so the new value of u is
+                numerator = - below_point - left_point - right_point - top_point;
+                u_vals(i, j) = numerator / (2 + 2 * epsilon);
+
+                % Check to see if this magnitude of u is larger then the
+                % current max
+                if abs(u_vals(i, j)) > cur_max_u
+                    cur_max_u = abs(u_vals(i, j));
+                end
+            end
+        end
+
+        % After all of the new values have been found we can update the
+        % max_val
+        max_val = cur_max_u;
+    end
+
+    % Once we get outside of this loop then we have found the final u
+    % values
+    u_final = u_vals;
+
+    % % This is going to be the general loop, start with 1000 steps.  Since A
+    % % is a sparce matrix we are going to use this to limit the number of
+    % % operations used.  There are 8 edge cases and the rest are the same.
+    % % For this I am going to assume that the matrix is at least 16x16.  The
+    % % base operation is:
+    % %   x_i^(j+1) = (b_i - sum new - sum old)/a_ii
+    % cur_sum = 0;
+    % for i = 1:1000
+    %     % This is going to be used to check for convergence, if the method
+    %     % converges then we will break out of the loop
+    %     x_old = x;
+    %     for j = 1:size_A
+    %         cur_sum = b(i);
+    % 
+    %         % The first edge case is when i = 1
+    %         if j == 1
+    %             cur_sum = cur_sum - x(j) * A(j, j);
+    %             cur_sum = cur_sum - x(j + 1) * A(j, j + 1);
+    %             cur_sum = cur_sum - x(j + 4) * A(j, j + 4);
+    %         % These cases are the next two rows to make sure that the i-1 value
+    %         % is included
+    %         elseif j == 2 || j == 3 || j == 4
+    %             cur_sum = cur_sum - x(j - 1) * A(j, j - 1);
+    %             cur_sum = cur_sum - x(j) * A(j, j);
+    %             cur_sum = cur_sum - x(j + 1) * A(j, j + 1);
+    %             cur_sum = cur_sum - x(j + 4) * A(j, j + 4);
+    %         % After this we are going to start cutting the i + # calculations
+    %         % when we get to the end of the loop
+    %         elseif j == (size_A - 3) || j == (size_A - 2) || j == (size_A - 1)
+    %             cur_sum = cur_sum - x(j - 4) * A(j, j - 4);
+    %             cur_sum = cur_sum - x(j - 1) * A(j, j - 1);
+    %             cur_sum = cur_sum - x(j) * A(j, j);
+    %             cur_sum = cur_sum - x(j + 1) * A(j, j + 1);
+    %         % This is the last row in the matrix, there are only 3 values
+    %         elseif j == size_A
+    %             cur_sum = cur_sum - x(j - 4) * A(j, j - 4);
+    %             cur_sum = cur_sum - x(j - 1) * A(j, j - 1);
+    %             cur_sum = cur_sum - x(j) * A(j, j);
+    %         % This is the general base case
+    %         else
+    %             cur_sum = cur_sum - x(j - 4) * A(j, j - 4);
+    %             cur_sum = cur_sum - x(j - 1) * A(j, j - 1);
+    %             cur_sum = cur_sum - x(j) * A(j, j);
+    %             cur_sum = cur_sum - x(j + 1) * A(j, j + 1);
+    %             cur_sum = cur_sum - x(j + 4) * A(j, j + 4);
+    %         end
+    % 
+    %         % Once we get here then we can divide by a(i, i) and then
+    %         % update the x vector
+    %         x(j) = cur_sum / a(j, j);
+    %     end
+    % 
+    %     % Check for convergence
+    %     error = convergence(x, x_old);
+    %     if error < tol
+    %         break
+    %     end
+    % 
+    % end
+    % 
+    % x_final = x;
+
+end

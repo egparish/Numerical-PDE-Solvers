@@ -1,0 +1,126 @@
+% NOTE: Parts of the file are withheld but available on request.
+% Structure, documentation, and descriptions are intact.  the file will
+% not run as posted.
+
+function [u_final, iterations, max_val] = Point_Jacobi(u, epsilon, N)
+    % This function is going to use point Jacobi to solve a system of
+    % linear equations.  Since we know that A is a sparce matrix instead of
+    % mapping the 2D A to a 1D vector.  A separate process is going to be
+    % used to optimize the matrix multiplecation based off of the structure
+    % of A.
+
+    % Since we know the structure of A due to the discretization of the
+    % problem we are not going to store it.  I am going to generate each
+    % equation using the old values of u.  There are going to be 2
+    % matricies of u values, one of the old and one of the new.  The u
+    % matrix is going to be (N + 2) x (N + 2) = N_mod x N_mod
+    % Inputs:
+    %   u = the initial data for the system
+    %   epslion = from the original PDE
+    %   N = the number of data points in u, does not include the imaginary
+    %   points
+    % Outputs
+    %   u_final = the results of the relaxation method
+
+    % This method converges when the largest u value is below the
+    % tolerance, at the start it is going to be set to the initial max.
+    % The total number of equations which is going to be used in the solver
+    % is N^2.  The system_dimension variable is the size of the matrix
+    % including the fake points, sys_dim = N + 2
+    tol = 10^-7;
+    max_val = max(max(u));
+    num_eqn = N^2;
+    sys_dim = N + 2;
+
+    % We need to keep 2 sets of data, the old points and the new points
+    u_old = u;
+    u_new = zeros(sys_dim, sys_dim);
+
+    % The first step is to generate the matrix D, store as vector so it
+    % takes up less space
+    D_vec = zeros(1, num_eqn);
+    D_vec_inverse = zeros(1, num_eqn);
+
+    % The A matrix updates with each new set of u's so from here everything
+    % is going to be stored inside of a while loop that is checking for
+    % convergence and if a maximum number of iterations was hit
+    iterations = 0;
+    while max_val > tol && iterations < 100000
+        iterations = iterations + 1;
+
+        % I am going to use a for loop to update each u value, everything
+        % is going to be within one loop since we know the strucutre of all
+        % of the equations using A, u and the form of the Jacobi method
+        % which is x_n+1 = Gx_n + D^-1b.  The hardest part of the loop is
+        % figuring out Gx_n, G is a matrix and x_n is a column vector.
+        % What we want to do is generate the ith row G and multiply it by
+        % the corresponding u values.  G = I - D^-1A.  This means that the
+        % ith row of G is going to be the ith row of the identity matrix -
+        % 1/ the diagonal of A multiplied by the ith row of what would be
+        % A.  As a result it is going to look like this:
+        % G_i = [... -(u_(i, j - 1))/((2 + 2e)u_(i, i)) 0 0 
+        %    -(eu_(i - 1, j)/((2 + 2e)u_(i, i)) 0 -(eu_(i + 1, j)/((2 + 2e)u_(i, i))
+        %    0 0 -(u_(i, j + 1))/((2 + 2e)u_(i, i)) ...]
+        %  We use the i - 4, i - 1, i, i + 1, and i + 4 values of u, all of
+        %  the other calculations we don't care about.  We use the
+        %  corresponding values of u to find Gx_n.  After we do these
+        %  calculations then we are going to subtract the ith value from
+        %  D^-1b which is the reciprocal of the ith diagonal of A
+        %  multiplied by 0 so it doesn't matter in this case.
+
+        % I said that it is going to use a single for loop but since u is
+        % stored in a matrix it is going to be a doulbe loop but the
+        % computational cost is the same.  The loop is going to update the
+        % corresponding value in u_new
+
+        % The first step is to use the discritization to populate the D
+        % matricies that will be treated as a vector.  The D matrix stores
+        % all of the diagonals in A, in this case the diagonal of A is
+        % equal to (2 + 2epsilon) * u.  The key thing to keep in mind with
+        % this matrix is that we have to add 1 to all of the indicies which
+        % is taken into account with the 2:(N+1) range
+
+        % One last component of the loop is that we are going to keep track
+        % of the max u value from here.
+        cur_max_u = 0;
+        for i = 2:(N + 1)
+            for j = 2:(N + 1)
+                % For ease of debugging I am going to compute each term on
+                % a different line and then combine them all at the end
+                % % denominator = (2 + 2 * epsilon); % * u_old(i, j);
+                % % below_point = -u_old(i, j - 1) / denominator;
+                % % left_point = -epsilon * u_old(i - 1, j) / denominator;
+                % % right_point = -epsilon * u_old(i + 1, j) / denominator;
+                % % top_point = -epsilon * u_old(i, j + 1) / denominator;
+
+                denominator = (2 + 2 * epsilon); % * u_old(i, j);
+                below_point = -u_old(i - 1, j) / denominator;
+                left_point = -epsilon * u_old(i, j - 1) / denominator;
+                right_point = -epsilon * u_old(i, j + 1) / denominator;
+                top_point = -u_old(i + 1, j) / denominator;
+                
+
+                % Update the new value of u
+                u_new(i, j) = below_point + left_point + right_point + top_point;
+
+                % Check to see if this magnitude of u is larger then the
+                % current max
+                if abs(u_new(i, j)) > cur_max_u
+                    cur_max_u = abs(u_new(i, j));
+                end
+            end
+        end
+        % max_val = cur_max_u
+
+        % After the new value are found and we know the max we can
+        % transition the value of u
+        max_val = cur_max_u;
+
+        % max_val > tol
+        u_old = u_new;
+
+    end
+
+    % After the loop the final u values are found and returned
+    u_final = u_new;   
+end

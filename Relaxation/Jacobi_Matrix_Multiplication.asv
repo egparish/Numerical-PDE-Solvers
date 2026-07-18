@@ -1,0 +1,10 @@
+function [DA] = Jacobi_Matrix_Multiplication(A,D)
+    % This function is going to compute the matrix product of a diagonal
+    % matrix D and a different matrix A
+
+    DA = eye(size(A));
+
+    for i = 1:size(A)
+        DA(i, i) = D(i, i) * A(i, i);
+    end
+end
